@@ -51,7 +51,7 @@ export async function execute(interaction) {
   let failed = 0;
   for (const guild of interaction.client.guilds.cache.values()) {
     try {
-      await guild.bans.create(target.id, { reason: `[GlobalBan] ${reason} | By: ${interaction.user.tag}` });
+      await guild.bans.create(target.id, { reason: `[Auto Global Ban from Contract Admin Bot] ${reason} | By: ${interaction.user.tag}` });
       banned++;
     } catch {
       failed++;
