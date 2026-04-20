@@ -37,6 +37,16 @@ export async function execute(interaction) {
     { upsert: true, new: true }
   );
 
+  try {
+    await target.send(
+      `**You've been __BANNED__ from all Contract servers.**\n\n` +
+      `Reason: **"${reason}"**\n\n` +
+      `To apply: `
+    );
+  } catch {
+    // DMs disabled or bot shares no server with user — silent fail
+  }
+
   let banned = 0;
   let failed = 0;
   for (const guild of interaction.client.guilds.cache.values()) {
