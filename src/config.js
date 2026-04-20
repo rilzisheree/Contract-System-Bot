@@ -1,6 +1,4 @@
 export const OWNER_IDS = [
-  // Add your Discord user IDs here
-  // Right-click any user in Discord (Developer Mode on) → Copy User ID
-  '123456789012345678', // replace with your real ID
-  // '222222222222222222', // add more as needed
+  '949585301507047424', // Kirata
+  '1246413280365514823', // Zyntide
 ];
