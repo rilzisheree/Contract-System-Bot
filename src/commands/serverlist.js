@@ -1,24 +1,14 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
+import {
+  SlashCommandBuilder, EmbedBuilder,
+  ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle,
+  ComponentType,
+} from 'discord.js';
 import { hasPermission } from '../lib/permissions.js';
 import { sendGlobalLog, logEmbed } from '../lib/logger.js';
 
 export const data = new SlashCommandBuilder()
   .setName('serverlist')
-  .setDescription('List all servers the bot is in')
-  .addStringOption(opt =>
-    opt.setName('action')
-      .setDescription('Additional action')
-      .setRequired(false)
-      .addChoices(
-        { name: 'leave', value: 'leave' },
-        { name: 'invite', value: 'invite' }
-      )
-  )
-  .addStringOption(opt =>
-    opt.setName('guild_id')
-      .setDescription('Guild ID for leave/invite action')
-      .setRequired(false)
-  );
+  .setDescription('List all servers the bot is in');
 
 export async function execute(interaction) {
   const allowed = await hasPermission(interaction, 'serverlist');
@@ -29,51 +19,116 @@ export async function execute(interaction) {
     });
   }
 
-  const action = interaction.options.getString('action');
-  const guildId = interaction.options.getString('guild_id');
-
   await interaction.deferReply({ ephemeral: true });
 
-  if (action === 'leave' && guildId) {
-    const guild = interaction.client.guilds.cache.get(guildId);
-    if (!guild) return interaction.editReply({ content: '❌ Guild not found.' });
-    const name = guild.name;
-    await guild.leave();
-    await sendGlobalLog(interaction.client, logEmbed('🚪 Left Server', `Bot left **${name}** (\`${guildId}\`) by **${interaction.user.tag}**`, 0x111111));
-    return interaction.editReply({ content: `✅ Left **${name}**.` });
-  }
+  const guilds = [...interaction.client.guilds.cache.values()];
 
-  if (action === 'invite' && guildId) {
-    const guild = interaction.client.guilds.cache.get(guildId);
-    if (!guild) return interaction.editReply({ content: '❌ Guild not found.' });
-    const channels = guild.channels.cache.filter(c => c.isTextBased() && c.permissionsFor(guild.members.me)?.has('CreateInstantInvite'));
-    const ch = channels.first();
-    if (!ch) return interaction.editReply({ content: '❌ Cannot create invite — no accessible channel.' });
-    const invite = await ch.createInvite({ maxAge: 0, maxUses: 1, reason: `Requested by ${interaction.user.tag}` });
-    return interaction.editReply({ content: `✅ Invite for **${guild.name}**: ${invite.url}` });
-  }
+  const embed = new EmbedBuilder()
+    .setTitle(`📋 Server List (${guilds.length} total)`)
+    .setColor(0x111111)
+    .setDescription(
+      guilds.slice(0, 10).map((g, idx) =>
+        `**${idx + 1}.** ${g.name}\n┗ ID: \`${g.id}\` • Members: ${g.memberCount}`
+      ).join('\n\n') +
+      (guilds.length > 10 ? `\n\n*...and ${guilds.length - 10} more*` : '')
+    )
+    .setTimestamp();
 
-  const guilds = interaction.client.guilds.cache;
-  const guildArray = [...guilds.values()];
-  const chunkSize = 10;
-  const pages = [];
+  const selectOptions = guilds.slice(0, 25).map(g => ({
+    label: g.name.slice(0, 100),
+    description: `${g.memberCount} members · ID: ${g.id}`,
+    value: g.id,
+  }));
 
-  for (let i = 0; i < guildArray.length; i += chunkSize) {
-    const chunk = guildArray.slice(i, i + chunkSize);
-    const embed = new EmbedBuilder()
-      .setTitle(`📋 Server List (${guilds.size} total) — Page ${Math.floor(i / chunkSize) + 1}`)
-      .setColor(0x111111)
-      .setDescription(chunk.map((g, idx) =>
-        `**${i + idx + 1}.** ${g.name}\n┗ ID: \`${g.id}\` • Members: ${g.memberCount}`
-      ).join('\n\n'))
-      .setTimestamp();
-    pages.push(embed);
-  }
+  const selectRow = new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('serverlist_select')
+      .setPlaceholder('Select a server...')
+      .addOptions(selectOptions)
+  );
 
-  await interaction.editReply({
-    embeds: [pages[0]],
-    content: pages.length > 1 ? `Page 1 of ${pages.length}` : undefined,
+  const actionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('serverlist_invite')
+      .setLabel('Get Invite')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId('serverlist_leave')
+      .setLabel('Leave Server')
+      .setStyle(ButtonStyle.Danger)
+      .setDisabled(true)
+  );
+
+  await interaction.editReply({ embeds: [embed], components: [selectRow, actionRow] });
+
+  let selectedGuildId = null;
+
+  const collector = interaction.channel.createMessageComponentCollector({
+    filter: i => i.user.id === interaction.user.id,
+    time: 120_000,
   });
 
-  await sendGlobalLog(interaction.client, logEmbed('📋 Server List', `**${interaction.user.tag}** viewed the server list`, 0x111111));
+  collector.on('collect', async i => {
+    if (i.customId === 'serverlist_select') {
+      selectedGuildId = i.values[0];
+      const guild = interaction.client.guilds.cache.get(selectedGuildId);
+
+      const updatedActions = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('serverlist_invite')
+          .setLabel(`Get Invite — ${guild?.name || selectedGuildId}`)
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(false),
+        new ButtonBuilder()
+          .setCustomId('serverlist_leave')
+          .setLabel(`Leave — ${guild?.name || selectedGuildId}`)
+          .setStyle(ButtonStyle.Danger)
+          .setDisabled(false)
+      );
+
+      await i.update({ components: [selectRow, updatedActions] });
+
+    } else if (i.customId === 'serverlist_invite' && selectedGuildId) {
+      const guild = interaction.client.guilds.cache.get(selectedGuildId);
+      if (!guild) return i.update({ content: '❌ Guild not found.', components: [] });
+
+      const channels = guild.channels.cache.filter(c =>
+        c.isTextBased() && c.permissionsFor(guild.members.me)?.has('CreateInstantInvite')
+      );
+      const ch = channels.first();
+      if (!ch) return i.reply({ content: '❌ Cannot create invite — no accessible channel.', ephemeral: true });
+
+      const invite = await ch.createInvite({ maxAge: 0, maxUses: 1, reason: `Requested by ${interaction.user.tag}` });
+      await i.reply({ content: `✅ Invite for **${guild.name}**: ${invite.url}`, ephemeral: true });
+
+    } else if (i.customId === 'serverlist_leave' && selectedGuildId) {
+      const guild = interaction.client.guilds.cache.get(selectedGuildId);
+      if (!guild) return i.update({ content: '❌ Guild not found.', components: [] });
+
+      const name = guild.name;
+      await guild.leave();
+      collector.stop();
+
+      await i.update({
+        embeds: [new EmbedBuilder()
+          .setColor(0x111111)
+          .setDescription(`✅ Left **${name}**.`)
+          .setTimestamp()],
+        components: [],
+      });
+
+      await sendGlobalLog(interaction.client, logEmbed(
+        '🚪 Left Server',
+        `Bot left **${name}** (\`${selectedGuildId}\`) by **${interaction.user.tag}**`,
+        0x111111
+      ));
+    }
+  });
+
+  collector.on('end', (_, reason) => {
+    if (reason === 'time') {
+      interaction.editReply({ components: [] }).catch(() => {});
+    }
+  });
 }
