@@ -25,7 +25,7 @@ export async function execute(interaction) {
   const messageInput = new TextInputBuilder()
     .setCustomId('message_content')
     .setLabel('What does your text say?')
-    .setPlaceholder('Text | Lore Name | Discord Username')
+    .setPlaceholder('Text | Lore Name |')
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true);
 
