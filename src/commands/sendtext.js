@@ -25,7 +25,7 @@ export async function execute(interaction) {
   const messageInput = new TextInputBuilder()
     .setCustomId('message_content')
     .setLabel('What does your text say?')
-    .setPlaceholder('Text | Lore Name |')
+    .setPlaceholder('Text | Lore Name | Discord Username')
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true);
 
@@ -35,3 +35,4 @@ export async function execute(interaction) {
   );
 
   await interaction.showModal(modal);
+}
