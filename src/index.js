@@ -225,7 +225,12 @@ client.on(Events.InteractionCreate, async interaction => {
       let deliveryFailed = false;
       try {
         const recipient = await client.users.fetch(toUserId);
-        await recipient.send(`A message is sent to your phone\n\n- ${message}`);
+        const dmEmbed = new EmbedBuilder()
+          .setTitle('📱 A message is sent to your phone')
+          .setDescription(`${message}`)
+          .setColor(0x2ecc71)
+          .setTimestamp();
+        await recipient.send({ embeds: [dmEmbed] });
       } catch { deliveryFailed = true; }
 
       try {
