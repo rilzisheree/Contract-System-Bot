@@ -148,7 +148,7 @@ client.on(Events.InteractionCreate, async interaction => {
   // ── /sendtext modal submission ────────────────────────────────────────────
   if (interaction.isModalSubmit() && interaction.customId === 'sendtext_modal') {
     const recipientId = interaction.fields.getTextInputValue('recipient_id').trim();
-    const loreName = interaction.fields.getTextInputValue('lore_name').trim() || '(Unknown)';
+    const loreName = (interaction.fields.fields.get('lore_name')?.value?.trim()) || '(Unknown)';
     const messageContent = interaction.fields.getTextInputValue('message_content').trim();
 
     if (!/^\d{17,19}$/.test(recipientId)) {
