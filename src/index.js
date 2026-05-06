@@ -148,6 +148,7 @@ client.on(Events.InteractionCreate, async interaction => {
   // ── /sendtext modal submission ────────────────────────────────────────────
   if (interaction.isModalSubmit() && interaction.customId === 'sendtext_modal') {
     const recipientId = interaction.fields.getTextInputValue('recipient_id').trim();
+    const loreName = interaction.fields.getTextInputValue('lore_name').trim() || '(Unknown)';
     const messageContent = interaction.fields.getTextInputValue('message_content').trim();
 
     if (!/^\d{17,19}$/.test(recipientId)) {
@@ -169,6 +170,7 @@ client.on(Events.InteractionCreate, async interaction => {
       fromUserId: interaction.user.id,
       toUserId: recipientId,
       message: messageContent,
+      loreName,
     });
 
     const embed = new EmbedBuilder()
@@ -214,7 +216,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     pendingRequests.delete(requestId);
-    const { fromUserId, toUserId, message } = request;
+    const { fromUserId, toUserId, message, loreName } = request;
 
     const doneRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('done_approve').setLabel('Approved').setStyle(ButtonStyle.Success).setEmoji('✅').setDisabled(true),
@@ -226,9 +228,10 @@ client.on(Events.InteractionCreate, async interaction => {
       try {
         const recipient = await client.users.fetch(toUserId);
         const dmEmbed = new EmbedBuilder()
-          .setTitle('A message is sent to your phone')
-          .setDescription(`${message}`)
+          .setTitle('A message is sent to your phone!')
+          .setDescription(`*"${message}"*`)
           .setColor(0x99aab5)
+          .addFields({ name: 'From', value: loreName })
           .setTimestamp();
         await recipient.send({ embeds: [dmEmbed] });
       } catch { deliveryFailed = true; }
