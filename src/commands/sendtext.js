@@ -35,4 +35,3 @@ export async function execute(interaction) {
   );
 
   await interaction.showModal(modal);
-}
