@@ -22,15 +22,23 @@ export async function execute(interaction) {
     .setStyle(TextInputStyle.Short)
     .setRequired(true);
 
+  const loreNameInput = new TextInputBuilder()
+    .setCustomId('lore_name')
+    .setLabel('Lore Name')
+    .setPlaceholder("You don't need to add a lore name, it'll show as (Unknown)")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false);
+
   const messageInput = new TextInputBuilder()
     .setCustomId('message_content')
     .setLabel('What does your text say?')
-    .setPlaceholder('Text | Lore Name | Discord Username')
+    .setPlaceholder('Text')
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true);
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(recipientInput),
+    new ActionRowBuilder().addComponents(loreNameInput),
     new ActionRowBuilder().addComponents(messageInput)
   );
 
