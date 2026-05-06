@@ -226,7 +226,7 @@ client.on(Events.InteractionCreate, async interaction => {
       try {
         const recipient = await client.users.fetch(toUserId);
         const dmEmbed = new EmbedBuilder()
-          .setTitle('📱 A message is sent to your phone')
+          .setTitle('A message is sent to your phone!')
           .setDescription(`${message}`)
           .setColor(0x2ecc71)
           .setTimestamp();
