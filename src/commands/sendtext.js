@@ -11,6 +11,7 @@ export const data = new SlashCommandBuilder()
   .setDescription('Send a text message to another player.');
 
 export async function execute(interaction) {
+  try {
   const modal = new ModalBuilder()
     .setCustomId('sendtext_modal')
     .setTitle('Send a Text Message');
@@ -43,4 +44,10 @@ export async function execute(interaction) {
   );
 
   await interaction.showModal(modal);
+  } catch (err) {
+    console.error('[sendtext] Failed to show modal:', err);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: '❌ Something went wrong. Please try again.', ephemeral: true }).catch(() => {});
+    }
+  }
 }
